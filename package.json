@@ -45,7 +45,7 @@
         "repository": {
           "url": "https://github.com/brave/brave-core.git"
         },
-        "branch": "webui-settings-brave"
+        "branch": "tiny-settings"
       }
     },
     "widevine": {
