@@ -37,6 +37,7 @@ pipeline {
                 script {
                     env.BRANCH_TO_BUILD = (env.CHANGE_BRANCH == null ? env.BRANCH : env.CHANGE_BRANCH)
                     env.RELEASE_TYPE = (env.JOB_NAME == "brave-browser-build" ? "release" : "ci")
+                    env.BRANCH_EXISTS_IN_BC = httpRequest(url: "https://api.github.com/repos/brave/brave-core/branches/${BRANCH_TO_BUILD}", validResponseCodes: '100:499', quiet: true).status == 200
                 }
             }
         }
@@ -58,6 +59,17 @@ pipeline {
                             }
                             steps {
                                 checkout([$class: 'GitSCM', branches: [[name: "${BRANCH_TO_BUILD}"]], extensions: [[$class: 'WipeWorkspace']], userRemoteConfigs: [[url: 'https://github.com/brave/brave-browser.git']]])
+                            }
+                        }
+                        stage("pin") {
+                            when {
+                                expression { params.BRANCH_EXISTS_IN_BC }
+                            }
+                            steps {
+                                sh """
+                                    jq "del(.config.projects[\\"brave-core\\"].branch) | .config.projects[\\"brave-core\\"].branch=\\"${BRANCH_TO_BUILD}\\"" package.json > package.json.new
+                                    mv package.json.new package.json
+                                """
                             }
                         }
                         stage("install") {
@@ -191,8 +203,6 @@ pipeline {
                         }
                         stage("archive") {
                             steps {
-                                // commented because it takes much longer to copy to Jenkins than to S3
-                                // archiveArtifacts artifacts: "${OUT_DIR}/*.deb,${OUT_DIR}/*.rpm", fingerprint: true
                                 s3Upload(acl: "Private", bucket: "${BRAVE_ARTIFACTS_BUCKET}", includePathPattern: "*.deb",
                                     path: "${JOB_NAME}/${BUILD_NUMBER}/", pathStyleAccessEnabled: true, payloadSigningEnabled: true, workingDir: "${OUT_DIR}"
                                 )
@@ -219,6 +229,17 @@ pipeline {
                             }
                             steps {
                                 checkout([$class: 'GitSCM', branches: [[name: "${BRANCH_TO_BUILD}"]], extensions: [[$class: 'WipeWorkspace']], userRemoteConfigs: [[url: 'https://github.com/brave/brave-browser.git']]])
+                            }
+                        }
+                        stage("pin") {
+                            when {
+                                expression { params.BRANCH_EXISTS_IN_BC }
+                            }
+                            steps {
+                                sh """
+                                    jq "del(.config.projects[\\"brave-core\\"].branch) | .config.projects[\\"brave-core\\"].branch=\\"${BRANCH_TO_BUILD}\\"" package.json > package.json.new
+                                    mv package.json.new package.json
+                                """
                             }
                         }
                         stage("install") {
@@ -407,6 +428,17 @@ pipeline {
                                 checkout([$class: 'GitSCM', branches: [[name: "${BRANCH_TO_BUILD}"]], extensions: [[$class: 'WipeWorkspace']], userRemoteConfigs: [[url: 'https://github.com/brave/brave-browser.git']]])
                             }
                         }
+                        stage("pin") {
+                            when {
+                                expression { params.BRANCH_EXISTS_IN_BC }
+                            }
+                            steps {
+                                powershell """
+                                    jq "del(.config.projects[\"brave-core\"].branch) | .config.projects[\"brave-core\"].branch=\"${BRANCH_TO_BUILD}\"" package.json > package.json.new
+                                    Move-Item -Force package.json.new package.json
+                                """
+                            }
+                        }
                         stage("install") {
                             steps {
                                 powershell "npm install --no-optional"
@@ -560,8 +592,6 @@ pipeline {
                         }
                         stage("archive") {
                             steps {
-                                // commented because it takes much longer to copy to Jenkins than to S3
-                                // archiveArtifacts artifacts: "${OUT_DIR}/BraveBrowser*.exe", fingerprint: true
                                 s3Upload(acl: "Private", bucket: "${BRAVE_ARTIFACTS_BUCKET}", includePathPattern: "brave_installer_*.exe",
                                     path: "${JOB_NAME}/${BUILD_NUMBER}/", pathStyleAccessEnabled: true, payloadSigningEnabled: true, workingDir: "${OUT_DIR}"
                                 )
@@ -614,6 +644,17 @@ pipeline {
                             }
                             steps {
                                 checkout([$class: 'GitSCM', branches: [[name: "${BRANCH_TO_BUILD}"]], extensions: [[$class: 'WipeWorkspace']], userRemoteConfigs: [[url: 'https://github.com/brave/brave-browser.git']]])
+                            }
+                        }
+                        stage("pin") {
+                            when {
+                                expression { params.BRANCH_EXISTS_IN_BC }
+                            }
+                            steps {
+                                powershell """
+                                    jq "del(.config.projects[\"brave-core\"].branch) | .config.projects[\"brave-core\"].branch=\"${BRANCH_TO_BUILD}\"" package.json > package.json.new
+                                    Move-Item -Force package.json.new package.json
+                                """
                             }
                         }
                         stage("install") {
@@ -756,8 +797,6 @@ pipeline {
                         }
                         stage("archive") {
                             steps {
-                                // commented because it takes much longer to copy to Jenkins than to S3
-                                // archiveArtifacts artifacts: "${OUT_DIR}/BraveBrowser*.exe", fingerprint: true
                                 s3Upload(acl: "Private", bucket: "${BRAVE_ARTIFACTS_BUCKET}", includePathPattern: "brave_installer_*.exe",
                                     path: "${JOB_NAME}/${BUILD_NUMBER}/", pathStyleAccessEnabled: true, payloadSigningEnabled: true, workingDir: "${OUT_DIR}"
                                 )
