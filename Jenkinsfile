@@ -36,6 +36,11 @@ pipeline {
                     env.BRANCH_TO_BUILD = (env.CHANGE_BRANCH == null ? env.BRANCH : env.CHANGE_BRANCH)
                     env.BRANCH_EXISTS_IN_BC = httpRequest(url: "https://api.github.com/repos/brave/brave-core/branches/${BRANCH_TO_BUILD}", validResponseCodes: '100:499', quiet: true).status == 200
                 }
+                sh """
+                                    echo ${BRANCH_TO_BUILD}
+                                    echo ${BRANCH_EXISTS_IN_BC}
+                                    echo "aaaaaaaaaa"          
+                """      
             }
         }
         stage("build-all") {
@@ -64,9 +69,6 @@ pipeline {
                             }
                             steps {
                                 sh """
-                                    echo ${BRANCH_TO_BUILD}
-                                    echo ${BRANCH_EXISTS_IN_BC}
-                                    echo "aaaaaaaaaa"
                                     jq "del(.config.projects[`"brave-core`"].branch) | .config.projects[`"brave-core`"].branch=`"${BRANCH_TO_BUILD}`"" package.json > package.json.new
                                     mv package.json.new package.json
                                 """
