@@ -466,17 +466,7 @@ pipeline {
                                 }
                             }
                         }
-                        // stage("sccache") {
-                        //     when {
-                        //         anyOf {
-                        //             expression { "${DISABLE_SCCACHE}" == "false" }
-                        //             expression { "${RELEASE_TYPE}" == "ci" }
-                        //         }
-                        //     }
-                        //     steps {
-                        //         powershell "npm config --userconfig=.npmrc set sccache sccache"
-                        //     }
-                        // }
+                        // TODO: add sccache
                         stage("build") {
                             steps {
                                 powershell """
@@ -518,22 +508,7 @@ pipeline {
                                 }
                             }
                         }
-                        // // TODO: fix running browser tests in non-interactive mode
-                        // stage("test-browser") {
-                        //     steps {
-                        //         timeout(time: 20, unit: "MINUTES") {
-                        //             script {
-                        //                 try {
-                        //                     powershell "npm run test -- brave_browser_tests ${BUILD_TYPE} --output brave_browser_tests.xml"
-                        //                     xunit([GoogleTest(deleteOutputFiles: true, failIfNotNew: true, pattern: "src/brave_browser_tests.xml", skipNoTestFiles: false, stopProcessingIfError: true)])
-                        //                 }
-                        //                 catch (ex) {
-                        //                     currentBuild.result = "UNSTABLE"
-                        //                 }
-                        //             }
-                        //         }
-                        //     }
-                        // }
+                        // TODO: add test-browser
                         stage("dist-ci") {
                             when {
                                 expression { "${RELEASE_TYPE}" == "ci" }
@@ -680,17 +655,7 @@ pipeline {
                                 }
                             }
                         }
-                        // stage("sccache") {
-                        //     when {
-                        //         anyOf {
-                        //             expression { "${DISABLE_SCCACHE}" == "false" }
-                        //             expression { "${RELEASE_TYPE}" == "ci" }
-                        //         }
-                        //     }
-                        //     steps {
-                        //         powershell "npm config --userconfig=.npmrc set sccache sccache"
-                        //     }
-                        // }
+                        // TODO: add sccache
                         stage("build") {
                             steps {
                                 powershell """
@@ -732,22 +697,7 @@ pipeline {
                                 }
                             }
                         }
-                        // // TODO: fix running browser tests in non-interactive mode
-                        // stage("test-browser") {
-                        //     steps {
-                        //         timeout(time: 20, unit: "MINUTES") {
-                        //             script {
-                        //                 try {
-                        //                     powershell "npm run test -- brave_browser_tests ${BUILD_TYPE} --output brave_browser_tests.xml"
-                        //                     xunit([GoogleTest(deleteOutputFiles: true, failIfNotNew: true, pattern: "src/brave_browser_tests.xml", skipNoTestFiles: false, stopProcessingIfError: true)])
-                        //                 }
-                        //                 catch (ex) {
-                        //                     currentBuild.result = "UNSTABLE"
-                        //                 }
-                        //             }
-                        //         }
-                        //     }
-                        // }
+                        // TODO: add test-browser
                         stage("dist") {
                             steps {
                                 powershell """
