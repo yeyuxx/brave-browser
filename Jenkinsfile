@@ -434,7 +434,7 @@ pipeline {
                             }
                             steps {
                                 powershell """
-                                    jq "del(.config.projects[\"brave-core\"].branch) | .config.projects[\"brave-core\"].branch=\"${BRANCH_TO_BUILD}\"" package.json > package.json.new
+                                    jq "del(.config.projects[`"brave-core`"].branch) | .config.projects[`"brave-core`"].branch=`"${BRANCH_TO_BUILD}`"" package.json > package.json.new
                                     Move-Item -Force package.json.new package.json
                                 """
                             }
@@ -557,9 +557,10 @@ pipeline {
                                 powershell """
                                     Import-PfxCertificate -FilePath \"${KEY_PFX_PATH}\" -CertStoreLocation "Cert:\\LocalMachine\\My" -Password (ConvertTo-SecureString -String \"${AUTHENTICODE_PASSWORD_UNESCAPED}\" -AsPlaintext -Force)
                                     npm run create_dist -- ${BUILD_TYPE} --channel=${CHANNEL} --official_build=true --skip_signing
+
+                                    (Get-Content src\\brave\\vendor\\omaha\\omaha\\hammer-brave.bat) | % { $_ -replace "10.0.15063.0\", "" } | Set-Content src\\brave\\vendor\\omaha\\omaha\\hammer-brave.bat
+                                    npm run create_dist -- ${BUILD_TYPE} --channel=${CHANNEL} --build_omaha --tag_ap=x64-${CHANNEL} --target_arch=x64 --official_build=true --skip_signing
                                 """
-                                powershell '(Get-Content src\\brave\\vendor\\omaha\\omaha\\hammer-brave.bat) | % { $_ -replace "10.0.15063.0\", "" } | Set-Content src\\brave\\vendor\\omaha\\omaha\\hammer-brave.bat'
-                                powershell "npm run create_dist -- ${BUILD_TYPE} --channel=${CHANNEL} --build_omaha --tag_ap=x64-${CHANNEL} --target_arch=x64 --official_build=true --skip_signing"
                             }
                         }
                         stage("dist-release") {
@@ -570,9 +571,10 @@ pipeline {
                                 powershell """
                                     Import-PfxCertificate -FilePath \"${KEY_PFX_PATH}\" -CertStoreLocation "Cert:\\LocalMachine\\My" -Password (ConvertTo-SecureString -String \"${AUTHENTICODE_PASSWORD_UNESCAPED}\" -AsPlaintext -Force)
                                     npm run create_dist -- ${BUILD_TYPE} --channel=${CHANNEL} --official_build=true
+
+                                    (Get-Content src\\brave\\vendor\\omaha\\omaha\\hammer-brave.bat) | % { $_ -replace "10.0.15063.0\", "" } | Set-Content src\\brave\\vendor\\omaha\\omaha\\hammer-brave.bat
+                                    npm run create_dist -- ${BUILD_TYPE} --channel=${CHANNEL} --build_omaha --tag_ap=x64-${CHANNEL} --target_arch=x64 --official_build=true
                                 """
-                                powershell '(Get-Content src\\brave\\vendor\\omaha\\omaha\\hammer-brave.bat) | % { $_ -replace "10.0.15063.0\", "" } | Set-Content src\\brave\\vendor\\omaha\\omaha\\hammer-brave.bat'
-                                powershell "npm run create_dist -- ${BUILD_TYPE} --channel=${CHANNEL} --build_omaha --tag_ap=x64-${CHANNEL} --target_arch=x64 --official_build=true"
                             }
                         }
                         stage("github-upload") {
@@ -652,7 +654,7 @@ pipeline {
                             }
                             steps {
                                 powershell """
-                                    jq "del(.config.projects[\"brave-core\"].branch) | .config.projects[\"brave-core\"].branch=\"${BRANCH_TO_BUILD}\"" package.json > package.json.new
+                                    jq "del(.config.projects[`"brave-core`"].branch) | .config.projects[`"brave-core`"].branch=`"${BRANCH_TO_BUILD}`"" package.json > package.json.new
                                     Move-Item -Force package.json.new package.json
                                 """
                             }
@@ -767,17 +769,15 @@ pipeline {
                         //         }
                         //     }
                         // }
-                        stage("dist-release") {
-                            when {
-                                expression { "${RELEASE_TYPE}" == "release" }
-                            }
+                        stage("dist") {
                             steps {
                                 powershell """
                                     Import-PfxCertificate -FilePath \"${KEY_PFX_PATH}\" -CertStoreLocation "Cert:\\LocalMachine\\My" -Password (ConvertTo-SecureString -String \"${AUTHENTICODE_PASSWORD_UNESCAPED}\" -AsPlaintext -Force)
                                     npm run create_dist -- ${BUILD_TYPE} --channel=${CHANNEL} --official_build=true
+
+                                    (Get-Content src\\brave\\vendor\\omaha\\omaha\\hammer-brave.bat) | % { $_ -replace "10.0.15063.0\", "" } | Set-Content src\\brave\\vendor\\omaha\\omaha\\hammer-brave.bat
+                                    npm run create_dist -- ${BUILD_TYPE} --channel=${CHANNEL} --build_omaha --tag_ap=x86-${CHANNEL} --target_arch=ia32 --official_build=true
                                 """
-                                powershell '(Get-Content src\\brave\\vendor\\omaha\\omaha\\hammer-brave.bat) | % { $_ -replace "10.0.15063.0\", "" } | Set-Content src\\brave\\vendor\\omaha\\omaha\\hammer-brave.bat'
-                                powershell "npm run create_dist -- ${BUILD_TYPE} --channel=${CHANNEL} --build_omaha --tag_ap=x86-${CHANNEL} --target_arch=ia32 --official_build=true"
                             }
                         }
                         stage("github-upload") {
