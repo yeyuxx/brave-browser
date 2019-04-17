@@ -1,10 +1,7 @@
 pipeline {
     agent none
     options {
-        // 15m quiet period as described at https://jenkins.io/blog/2010/08/11/quiet-period-feature/
-        // quietPeriod(900)
         disableConcurrentBuilds()
-        // trying a longer timeout to queue jobs rather than fail them
         timeout(time: 12, unit: "HOURS")
         timestamps()
     }
@@ -98,11 +95,8 @@ pipeline {
                                         sh """
                                             git -C src/brave config user.name brave-builds
                                             git -C src/brave config user.email devops@brave.com
-
                                             git -C src/brave checkout -b ${LINT_BRANCH}
-
                                             npm run lint
-
                                             git -C src/brave checkout -q -
                                             git -C src/brave branch -D ${LINT_BRANCH}
                                         """
@@ -132,7 +126,6 @@ pipeline {
                                     npm config --userconfig=.npmrc set brave_google_api_key ${BRAVE_GOOGLE_API_KEY}
                                     npm config --userconfig=.npmrc set google_api_endpoint safebrowsing.brave.com
                                     npm config --userconfig=.npmrc set google_api_key dummytoken
-
                                     npm run build -- ${BUILD_TYPE} --channel=${CHANNEL} --official_build=true
                                 """
                             }
@@ -268,11 +261,8 @@ pipeline {
                                         sh """
                                             git -C src/brave config user.name brave-builds
                                             git -C src/brave config user.email devops@brave.com
-
                                             git -C src/brave checkout -b ${LINT_BRANCH}
-
                                             npm run lint
-
                                             git -C src/brave checkout -q -
                                             git -C src/brave branch -D ${LINT_BRANCH}
                                         """
@@ -302,7 +292,6 @@ pipeline {
                                     npm config --userconfig=.npmrc set brave_google_api_key ${BRAVE_GOOGLE_API_KEY}
                                     npm config --userconfig=.npmrc set google_api_endpoint safebrowsing.brave.com
                                     npm config --userconfig=.npmrc set google_api_key dummytoken
-
                                     npm run build -- ${BUILD_TYPE} --channel=${CHANNEL} --official_build=true
                                 """
                             }
@@ -465,11 +454,8 @@ pipeline {
                                         powershell """
                                             git -C src/brave config user.name brave-builds
                                             git -C src/brave config user.email devops@brave.com
-
                                             git -C src/brave checkout -b ${LINT_BRANCH}
-
                                             npm run lint
-
                                             git -C src/brave checkout -q -
                                             git -C src/brave branch -D ${LINT_BRANCH}
                                         """
@@ -499,7 +485,6 @@ pipeline {
                                     npm config --userconfig=.npmrc set brave_google_api_key ${BRAVE_GOOGLE_API_KEY}
                                     npm config --userconfig=.npmrc set google_api_endpoint safebrowsing.brave.com
                                     npm config --userconfig=.npmrc set google_api_key dummytoken
-
                                     npm run build -- ${BUILD_TYPE} --channel=${CHANNEL} --official_build=true
                                 """
                             }
@@ -557,7 +542,6 @@ pipeline {
                                 powershell """
                                     Import-PfxCertificate -FilePath \"${KEY_PFX_PATH}\" -CertStoreLocation "Cert:\\LocalMachine\\My" -Password (ConvertTo-SecureString -String \"${AUTHENTICODE_PASSWORD_UNESCAPED}\" -AsPlaintext -Force)
                                     npm run create_dist -- ${BUILD_TYPE} --channel=${CHANNEL} --official_build=true --skip_signing
-
                                     (Get-Content src\\brave\\vendor\\omaha\\omaha\\hammer-brave.bat) | % { $_ -replace "10.0.15063.0\", "" } | Set-Content src\\brave\\vendor\\omaha\\omaha\\hammer-brave.bat
                                     npm run create_dist -- ${BUILD_TYPE} --channel=${CHANNEL} --build_omaha --tag_ap=x64-${CHANNEL} --target_arch=x64 --official_build=true --skip_signing
                                 """
@@ -571,7 +555,6 @@ pipeline {
                                 powershell """
                                     Import-PfxCertificate -FilePath \"${KEY_PFX_PATH}\" -CertStoreLocation "Cert:\\LocalMachine\\My" -Password (ConvertTo-SecureString -String \"${AUTHENTICODE_PASSWORD_UNESCAPED}\" -AsPlaintext -Force)
                                     npm run create_dist -- ${BUILD_TYPE} --channel=${CHANNEL} --official_build=true
-
                                     (Get-Content src\\brave\\vendor\\omaha\\omaha\\hammer-brave.bat) | % { $_ -replace "10.0.15063.0\", "" } | Set-Content src\\brave\\vendor\\omaha\\omaha\\hammer-brave.bat
                                     npm run create_dist -- ${BUILD_TYPE} --channel=${CHANNEL} --build_omaha --tag_ap=x64-${CHANNEL} --target_arch=x64 --official_build=true
                                 """
@@ -613,6 +596,204 @@ pipeline {
                                     path: "${JOB_NAME}/${BUILD_NUMBER}/", pathStyleAccessEnabled: true, payloadSigningEnabled: true, workingDir: "${OUT_DIR}"
                                 )
                                 s3Upload(acl: "Private", bucket: "${BRAVE_ARTIFACTS_BUCKET}", includePathPattern: "BraveBrowserUntagged${CHANNEL_CAPITALIZED}Setup_*.exe",
+                                    path: "${JOB_NAME}/${BUILD_NUMBER}/", pathStyleAccessEnabled: true, payloadSigningEnabled: true, workingDir: "${OUT_DIR}"
+                                )
+                            }
+                        }
+                    }
+                }
+                stage("windows-ia32") {
+                    when {
+                        beforeAgent true
+                        expression { "${RELEASE_TYPE}" == "release" }
+                    }
+                    agent { label "windows-${RELEASE_TYPE}" }
+                    environment {
+                        GIT_CACHE_PATH = "${USERPROFILE}\\cache"
+                        SCCACHE_BUCKET = credentials("brave-browser-sccache-win-s3-bucket")
+                        PATH = "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.17134.0\\x64\\;C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\Common7\\IDE\\Remote Debugger\\x64;${PATH}"
+                        SIGNTOOL_ARGS = "sign /t http://timestamp.verisign.com/scripts/timstamp.dll /fd sha256 /sm"
+                        CERT = "Brave"
+                        KEY_CER_PATH = "C:\\jenkins\\digicert-key\\digicert.cer"
+                        KEY_PFX_PATH = "C:\\jenkins\\digicert-key\\digicert.pfx"
+                        AUTHENTICODE_PASSWORD = credentials("digicert-brave-browser-development-certificate-ps-escaped")
+                        AUTHENTICODE_PASSWORD_UNESCAPED = credentials("digicert-brave-browser-development-certificate")
+                    }
+                    stages {
+                        stage("checkout") {
+                            when {
+                                anyOf {
+                                    expression { params.WIPE_WORKSPACE }
+                                    expression { return !fileExists("package.json") }
+                                }
+                            }
+                            steps {
+                                checkout([$class: 'GitSCM', branches: [[name: "${BRANCH_TO_BUILD}"]], extensions: [[$class: 'WipeWorkspace']], userRemoteConfigs: [[url: 'https://github.com/brave/brave-browser.git']]])
+                            }
+                        }
+                        stage("pin") {
+                            when {
+                                expression { params.BRANCH_EXISTS_IN_BC }
+                            }
+                            steps {
+                                powershell """
+                                    jq "del(.config.projects[`"brave-core`"].branch) | .config.projects[`"brave-core`"].branch=`"${BRANCH_TO_BUILD}`"" package.json > package.json.new
+                                    Move-Item -Force package.json.new package.json
+                                """
+                            }
+                        }
+                        stage("install") {
+                            steps {
+                                powershell "npm install --no-optional"
+                                powershell "Remove-Item ${GIT_CACHE_PATH}/*.lock"
+                            }
+                        }
+                        stage("init") {
+                            when {
+                                expression { return !fileExists("src/brave/package.json") || params.RUN_INIT }
+                            }
+                            steps {
+                                powershell "npm run init"
+                            }
+                        }
+                        stage("sync") {
+                            steps {
+                                powershell "npm run sync -- --all"
+                            }
+                        }
+                        stage("lint") {
+                            steps {
+                                script {
+                                    try {
+                                        powershell """
+                                            git -C src/brave config user.name brave-builds
+                                            git -C src/brave config user.email devops@brave.com
+                                            git -C src/brave checkout -b ${LINT_BRANCH}
+                                            npm run lint
+                                            git -C src/brave checkout -q -
+                                            git -C src/brave branch -D ${LINT_BRANCH}
+                                        """
+                                    }
+                                    catch (ex) {
+                                        currentBuild.result = "UNSTABLE"
+                                    }
+                                }
+                            }
+                        }
+                        // stage("sccache") {
+                        //     when {
+                        //         anyOf {
+                        //             expression { "${DISABLE_SCCACHE}" == "false" }
+                        //             expression { "${RELEASE_TYPE}" == "ci" }
+                        //         }
+                        //     }
+                        //     steps {
+                        //         powershell "npm config --userconfig=.npmrc set sccache sccache"
+                        //     }
+                        // }
+                        stage("build") {
+                            steps {
+                                powershell """
+                                    npm config --userconfig=.npmrc set brave_referrals_api_key ${REFERRAL_API_KEY}
+                                    npm config --userconfig=.npmrc set brave_google_api_endpoint https://location.services.mozilla.com/v1/geolocate?key=
+                                    npm config --userconfig=.npmrc set brave_google_api_key ${BRAVE_GOOGLE_API_KEY}
+                                    npm config --userconfig=.npmrc set google_api_endpoint safebrowsing.brave.com
+                                    npm config --userconfig=.npmrc set google_api_key dummytoken
+                                    npm run build -- ${BUILD_TYPE} --channel=${CHANNEL} --official_build=true --target_arch=ia32
+                                """
+                            }
+                        }
+                        stage("test-security") {
+                            steps {
+                                timeout(time: 4, unit: "MINUTES") {
+                                    script {
+                                        try {
+                                            powershell "npm run test-security -- --output_path=\"${OUT_DIR}/brave.exe\""
+                                        }
+                                        catch (ex) {
+                                            currentBuild.result = "UNSTABLE"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        stage("test-unit") {
+                            steps {
+                                timeout(time: 20, unit: "MINUTES") {
+                                    script {
+                                        try {
+                                            powershell "npm run test -- brave_unit_tests ${BUILD_TYPE} --output brave_unit_tests.xml"
+                                            xunit([GoogleTest(deleteOutputFiles: true, failIfNotNew: true, pattern: "src/brave_unit_tests.xml", skipNoTestFiles: false, stopProcessingIfError: true)])
+                                        }
+                                        catch (ex) {
+                                            currentBuild.result = "UNSTABLE"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // // TODO: fix running browser tests in non-interactive mode
+                        // stage("test-browser") {
+                        //     steps {
+                        //         timeout(time: 20, unit: "MINUTES") {
+                        //             script {
+                        //                 try {
+                        //                     powershell "npm run test -- brave_browser_tests ${BUILD_TYPE} --output brave_browser_tests.xml"
+                        //                     xunit([GoogleTest(deleteOutputFiles: true, failIfNotNew: true, pattern: "src/brave_browser_tests.xml", skipNoTestFiles: false, stopProcessingIfError: true)])
+                        //                 }
+                        //                 catch (ex) {
+                        //                     currentBuild.result = "UNSTABLE"
+                        //                 }
+                        //             }
+                        //         }
+                        //     }
+                        // }
+                        stage("dist") {
+                            steps {
+                                powershell """
+                                    Import-PfxCertificate -FilePath \"${KEY_PFX_PATH}\" -CertStoreLocation "Cert:\\LocalMachine\\My" -Password (ConvertTo-SecureString -String \"${AUTHENTICODE_PASSWORD_UNESCAPED}\" -AsPlaintext -Force)
+                                    npm run create_dist -- ${BUILD_TYPE} --channel=${CHANNEL} --official_build=true
+                                    (Get-Content src\\brave\\vendor\\omaha\\omaha\\hammer-brave.bat) | % { $_ -replace "10.0.15063.0\", "" } | Set-Content src\\brave\\vendor\\omaha\\omaha\\hammer-brave.bat
+                                    npm run create_dist -- ${BUILD_TYPE} --channel=${CHANNEL} --build_omaha --tag_ap=x86-${CHANNEL} --target_arch=ia32 --official_build=true
+                                """
+                            }
+                        }
+                        stage("github-upload") {
+                            when {
+                                expression { "${RELEASE_TYPE}" == "release" }
+                            }
+                            steps {
+                                withCredentials([[
+                                    $class: "AmazonWebServicesCredentialsBinding",
+                                    credentialsId: "brave-browser-binaries-upload",
+                                    accessKeyVariable: "BRAVE_S3_ACCESS_KEY",
+                                    secretKeyVariable: "BRAVE_S3_SECRET_KEY"
+                                ]]) {
+                                    powershell "npm run upload -- --target_arch=ia32"
+                                }
+                            }
+                        }
+                        stage("archive") {
+                            steps {
+                                s3Upload(acl: "Private", bucket: "${BRAVE_ARTIFACTS_BUCKET}", includePathPattern: "brave_installer_*.exe",
+                                    path: "${JOB_NAME}/${BUILD_NUMBER}/", pathStyleAccessEnabled: true, payloadSigningEnabled: true, workingDir: "${OUT_DIR}"
+                                )
+                                s3Upload(acl: "Private", bucket: "${BRAVE_ARTIFACTS_BUCKET}", includePathPattern: "BraveBrowser${CHANNEL_CAPITALIZED}Setup32_*.exe",
+                                    path: "${JOB_NAME}/${BUILD_NUMBER}/", pathStyleAccessEnabled: true, payloadSigningEnabled: true, workingDir: "${OUT_DIR}"
+                                )
+                                s3Upload(acl: "Private", bucket: "${BRAVE_ARTIFACTS_BUCKET}", includePathPattern: "BraveBrowserSilent${CHANNEL_CAPITALIZED}Setup32_*.exe",
+                                    path: "${JOB_NAME}/${BUILD_NUMBER}/", pathStyleAccessEnabled: true, payloadSigningEnabled: true, workingDir: "${OUT_DIR}"
+                                )
+                                s3Upload(acl: "Private", bucket: "${BRAVE_ARTIFACTS_BUCKET}", includePathPattern: "BraveBrowserStandalone${CHANNEL_CAPITALIZED}Setup32_*.exe",
+                                    path: "${JOB_NAME}/${BUILD_NUMBER}/", pathStyleAccessEnabled: true, payloadSigningEnabled: true, workingDir: "${OUT_DIR}"
+                                )
+                                s3Upload(acl: "Private", bucket: "${BRAVE_ARTIFACTS_BUCKET}", includePathPattern: "BraveBrowserStandaloneSilent${CHANNEL_CAPITALIZED}Setup32_*.exe",
+                                    path: "${JOB_NAME}/${BUILD_NUMBER}/", pathStyleAccessEnabled: true, payloadSigningEnabled: true, workingDir: "${OUT_DIR}"
+                                )
+                                s3Upload(acl: "Private", bucket: "${BRAVE_ARTIFACTS_BUCKET}", includePathPattern: "BraveBrowserStandaloneUntagged${CHANNEL_CAPITALIZED}Setup32_*.exe",
+                                    path: "${JOB_NAME}/${BUILD_NUMBER}/", pathStyleAccessEnabled: true, payloadSigningEnabled: true, workingDir: "${OUT_DIR}"
+                                )
+                                s3Upload(acl: "Private", bucket: "${BRAVE_ARTIFACTS_BUCKET}", includePathPattern: "BraveBrowserUntagged${CHANNEL_CAPITALIZED}Setup32_*.exe",
                                     path: "${JOB_NAME}/${BUILD_NUMBER}/", pathStyleAccessEnabled: true, payloadSigningEnabled: true, workingDir: "${OUT_DIR}"
                                 )
                             }
