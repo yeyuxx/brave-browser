@@ -16,9 +16,9 @@ pipeline {
         BRANCH = "${params.BRANCH}"
         CHANNEL = "${params.CHANNEL}"
         CHANNEL_CAPITALIZED = "${CHANNEL}".capitalize()
-        WIPE_WORKSPACE = params.WIPE_WORKSPACE
-        RUN_INIT = ${params.RUN_INIT}
-        DISABLE_SCCACHE = ${params.DISABLE_SCCACHE}
+        WIPE_WORKSPACE = "${params.WIPE_WORKSPACE}"
+        RUN_INIT = "${params.RUN_INIT}"
+        DISABLE_SCCACHE = "${params.DISABLE_SCCACHE}"
         BUILD_TYPE = "Release"
         OUT_DIR = "src/out/${BUILD_TYPE}"
         LINT_BRANCH = "TEMP_LINT_BRANCH_${BUILD_NUMBER}"
@@ -50,6 +50,7 @@ pipeline {
                         stage("checkout") {
                             when {
                                 anyOf {
+                                    // TODO: replace with env.
                                     expression { params.WIPE_WORKSPACE }
                                     expression { return !fileExists("package.json") }
                                 }
@@ -114,7 +115,7 @@ pipeline {
                         stage("sccache") {
                             when {
                                 anyOf {
-                                    expression { env.DISABLE_SCCACHE == false }
+                                    expression { "${DISABLE_SCCACHE}" == "false" }
                                     expression { "${RELEASE_TYPE}" == "ci" }
                                 }
                             }
@@ -215,7 +216,7 @@ pipeline {
                         }
                         stage("pin") {
                             when {
-                                expression { params.BRANCH_EXISTS_IN_BC }
+                                expression { env.BRANCH_EXISTS_IN_BC }
                             }
                             steps {
                                 sh """
@@ -383,7 +384,7 @@ pipeline {
                         stage("checkout") {
                             when {
                                 anyOf {
-                                    expression { params.WIPE_WORKSPACE }
+                                    expression { env.WIPE_WORKSPACE }
                                     expression { return !fileExists("package.json") }
                                 }
                             }
@@ -393,7 +394,7 @@ pipeline {
                         }
                         stage("pin") {
                             when {
-                                expression { params.BRANCH_EXISTS_IN_BC }
+                                expression { env.BRANCH_EXISTS_IN_BC }
                             }
                             steps {
                                 powershell """
@@ -567,7 +568,7 @@ pipeline {
                         }
                         stage("pin") {
                             when {
-                                expression { params.BRANCH_EXISTS_IN_BC }
+                                expression { env.BRANCH_EXISTS_IN_BC }
                             }
                             steps {
                                 powershell """
