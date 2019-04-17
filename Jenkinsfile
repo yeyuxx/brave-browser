@@ -179,21 +179,6 @@ pipeline {
                                 sh "npm run create_dist -- ${BUILD_TYPE} --channel=${CHANNEL} --official_build=true"
                             }
                         }
-                        stage("github-upload") {
-                            when {
-                                expression { "${RELEASE_TYPE}" == "release" }
-                            }
-                            steps {
-                                withCredentials([[
-                                    $class: "AmazonWebServicesCredentialsBinding",
-                                    credentialsId: "brave-browser-binaries-upload",
-                                    accessKeyVariable: "BRAVE_S3_ACCESS_KEY",
-                                    secretKeyVariable: "BRAVE_S3_SECRET_KEY"
-                                ]]) {
-                                    sh "npm run upload"
-                                }
-                            }
-                        }
                         stage("archive") {
                             steps {
                                 s3Upload(acl: "Private", bucket: "${BRAVE_ARTIFACTS_BUCKET}", includePathPattern: "*.deb",
@@ -354,21 +339,6 @@ pipeline {
                             }
                             steps {
                                 sh "npm run create_dist -- ${BUILD_TYPE} --channel=${CHANNEL} --official_build=true"
-                            }
-                        }
-                        stage("github-upload") {
-                            when {
-                                expression { "${RELEASE_TYPE}" == "release" }
-                            }
-                            steps {
-                                withCredentials([[
-                                    $class: "AmazonWebServicesCredentialsBinding",
-                                    credentialsId: "brave-browser-binaries-upload",
-                                    accessKeyVariable: "BRAVE_S3_ACCESS_KEY",
-                                    secretKeyVariable: "BRAVE_S3_SECRET_KEY"
-                                ]]) {
-                                    sh "npm run upload"
-                                }
                             }
                         }
                         stage("archive") {
@@ -535,21 +505,6 @@ pipeline {
                                 """
                             }
                         }
-                        stage("github-upload") {
-                            when {
-                                expression { "${RELEASE_TYPE}" == "release" }
-                            }
-                            steps {
-                                withCredentials([[
-                                    $class: "AmazonWebServicesCredentialsBinding",
-                                    credentialsId: "brave-browser-binaries-upload",
-                                    accessKeyVariable: "BRAVE_S3_ACCESS_KEY",
-                                    secretKeyVariable: "BRAVE_S3_SECRET_KEY"
-                                ]]) {
-                                    powershell "npm run upload -- --target_arch=x64"
-                                }
-                            }
-                        }
                         stage("archive") {
                             steps {
                                 s3Upload(acl: "Private", bucket: "${BRAVE_ARTIFACTS_BUCKET}", includePathPattern: "brave_installer_*.exe",
@@ -706,21 +661,6 @@ pipeline {
                                     (Get-Content src\\brave\\vendor\\omaha\\omaha\\hammer-brave.bat) | % { $_ -replace "10.0.15063.0\", "" } | Set-Content src\\brave\\vendor\\omaha\\omaha\\hammer-brave.bat
                                     npm run create_dist -- ${BUILD_TYPE} --channel=${CHANNEL} --build_omaha --tag_ap=x86-${CHANNEL} --target_arch=ia32 --official_build=true
                                 """
-                            }
-                        }
-                        stage("github-upload") {
-                            when {
-                                expression { "${RELEASE_TYPE}" == "release" }
-                            }
-                            steps {
-                                withCredentials([[
-                                    $class: "AmazonWebServicesCredentialsBinding",
-                                    credentialsId: "brave-browser-binaries-upload",
-                                    accessKeyVariable: "BRAVE_S3_ACCESS_KEY",
-                                    secretKeyVariable: "BRAVE_S3_SECRET_KEY"
-                                ]]) {
-                                    powershell "npm run upload -- --target_arch=ia32"
-                                }
                             }
                         }
                         stage("archive") {
