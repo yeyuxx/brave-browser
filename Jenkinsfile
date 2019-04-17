@@ -394,7 +394,7 @@ pipeline {
                             }
                             steps {
                                 powershell """
-                                    jq `"del(.config.projects[`"brave-core`"].branch) | .config.projects[`"brave-core`"].branch=`"${BRANCH_TO_BUILD}`"`" package.json > package.json.new
+                                    jq "del(.config.projects[`"brave-core`"].branch) | .config.projects[`"brave-core`"].branch=`"${BRANCH_TO_BUILD}`"" package.json > package.json.new
                                     Move-Item -Force package.json.new package.json
                                 """
                             }
@@ -568,7 +568,7 @@ pipeline {
                             }
                             steps {
                                 powershell """
-                                    jq `"del(.config.projects[`"brave-core`"].branch) | .config.projects[`"brave-core`"].branch=`"${BRANCH_TO_BUILD}`"`" package.json > package.json.new
+                                    jq "del(.config.projects[`"brave-core`"].branch) | .config.projects[`"brave-core`"].branch=`"${BRANCH_TO_BUILD}`"" package.json > package.json.new
                                     Move-Item -Force package.json.new package.json
                                 """
                             }
