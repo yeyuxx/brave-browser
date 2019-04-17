@@ -45,7 +45,7 @@
         "repository": {
           "url": "https://github.com/brave/brave-core.git"
         },
-        "branch": "0.64.x"
+        "branch": "run_dark_mode_test_only_mojave_64"
       }
     },
     "widevine": {
