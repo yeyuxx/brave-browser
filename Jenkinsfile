@@ -6,35 +6,38 @@ pipeline {
         timestamps()
     }
     parameters {
-        string(name: "BRANCH", defaultValue: "master")
-        choice(name: "CHANNEL", choices: ["dev", "beta", "release", "nightly"])
-        booleanParam(name: "WIPE_WORKSPACE", defaultValue: false)
-        booleanParam(name: "RUN_INIT", defaultValue: false)
-        booleanParam(name: "DISABLE_SCCACHE", defaultValue: false)
+        string(name: "BRANCH", defaultValue: "master", description: "")
+        choice(name: "CHANNEL", choices: ["dev", "beta", "release", "nightly"], description: "")
+        booleanParam(name: "WIPE_WORKSPACE", defaultValue: false, description: "")
+        booleanParam(name: "RUN_INIT", defaultValue: false, description: "")
+        booleanParam(name: "DISABLE_SCCACHE", defaultValue: false, description: "")
+        booleanParam(name: "DEBUG", defaultValue: false, description: "")
     }
     environment {
-        BRANCH = "${params.BRANCH}"
-        CHANNEL = "${params.CHANNEL}"
-        CHANNEL_CAPITALIZED = "${CHANNEL}".capitalize()
-        WIPE_WORKSPACE = "${params.WIPE_WORKSPACE}"
-        RUN_INIT = "${params.RUN_INIT}"
-        DISABLE_SCCACHE = "${params.DISABLE_SCCACHE}"
-        BUILD_TYPE = "Release"
-        OUT_DIR = "src/out/${BUILD_TYPE}"
-        LINT_BRANCH = "TEMP_LINT_BRANCH_${BUILD_NUMBER}"
         REFERRAL_API_KEY = credentials("REFERRAL_API_KEY")
         BRAVE_GOOGLE_API_KEY = credentials("npm_config_brave_google_api_key")
         BRAVE_ARTIFACTS_BUCKET = credentials("brave-jenkins-artifacts-s3-bucket")
         BRAVE_S3_BUCKET = credentials("brave-binaries-s3-bucket")
-        BRAVE_GITHUB_TOKEN = "brave-browser-releases-github"
     }
     stages {
         stage("env") {
             steps {
                 script {
-                    env.RELEASE_TYPE = (env.JOB_NAME == "brave-browser-build" ? "release" : "ci")
-                    env.BRANCH_TO_BUILD = (env.CHANGE_BRANCH == null ? env.BRANCH : env.CHANGE_BRANCH)
-                    env.BRANCH_EXISTS_IN_BC = httpRequest(url: "https://api.github.com/repos/brave/brave-core/branches/${BRANCH_TO_BUILD}", validResponseCodes: '100:499').status == 200
+                    BRANCH = params.BRANCH
+                    CHANNEL = params.CHANNEL
+                    CHANNEL_CAPITALIZED = CHANNEL.capitalize()
+                    WIPE_WORKSPACE = params.WIPE_WORKSPACE
+                    RUN_INIT = params.RUN_INIT
+                    DISABLE_SCCACHE = params.DISABLE_SCCACHE
+                    DEBUG = params.DEBUG
+                    BUILD_TYPE = "Release"
+                    OUT_DIR = "src/out/" + BUILD_TYPE
+                    LINT_BRANCH = "TEMP_LINT_BRANCH_" + BUILD_NUMBER
+                    RELEASE_TYPE = (JOB_NAME == "brave-browser-build" ? "release" : "ci")
+                    BRANCH_TO_BUILD = (CHANGE_BRANCH == null ? BRANCH : CHANGE_BRANCH)
+                    GITHUB_CREDENTIAL_ID = "brave-builds-github-token-for-pr-builder"
+                    BRANCH_EXISTS_IN_BC = httpRequest(url: "https://api.github.com/repos/brave/brave-core/branches/${BRANCH_TO_BUILD}", validResponseCodes: '100:499', authentication: GITHUB_CREDENTIAL_ID, quiet: !DEBUG).status == 200
+                    BRAVE_GITHUB_TOKEN = "brave-browser-releases-github"
                 }
             }
         }
